@@ -1,0 +1,127 @@
+//Soil Moisture Sensor Project
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+
+const char* ssid = "T"; //Insert ssid
+const char* password = ""; //Insert password 
+
+//create an instance of the ESP8266WebServer library
+ESP8266WebServer server(80);
+
+int moistVal = 0;
+int percent = 0;
+int tooDry = 150; //set low parameter for plant
+int tooWet = 400; //set high parameter for plant
+const int red = D6;
+const int green = D7;
+const int blue = D8;
+
+void setup()
+{
+  Serial.begin(9600);
+  delay(100);
+  
+  pinMode (red, OUTPUT);
+  pinMode (green, OUTPUT);
+  pinMode (blue, OUTPUT);
+
+  //when the board is successfully connected to the network,
+  //display the IP assigned to it in the serial manager.
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid,password);
+     while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("Wifi connected");
+  Serial.print("IP address: "); 
+  Serial.println(WiFi.localIP());
+
+  server.on("/",handle_OnConnect);
+  server.onNotFound(handle_NotFound);
+  
+  server.begin();
+  Serial.println("Web server started!");
+}
+  
+void loop()
+{
+  server.handleClient();
+}
+
+void handle_OnConnect()
+{
+  
+  moistVal = analogRead(A0);
+  Serial.print("Moisture value : ");
+  Serial.println(moistVal);
+  percent = 2.718282 * 2.718282 * (.008985 * moistVal + 0.207762); //calculate percent
+  Serial.print(percent);
+  Serial.println("% Moisture ");
+  if (moistVal <= tooDry) {
+    Serial.println("Soil too dry need to watered");
+    digitalWrite(red, HIGH); //Red LED
+    digitalWrite(blue, LOW);
+    digitalWrite(green, LOW);
+  }
+  else if (moistVal >= tooWet) {
+    Serial.println("Soil too wet no need to watered");
+    digitalWrite(red, LOW);
+    digitalWrite(blue, HIGH); //Blue LED
+    digitalWrite(green, LOW);
+  }
+  else {
+    Serial.println("Soil in good condition for plant");
+    digitalWrite(red, LOW);
+    digitalWrite(blue, LOW);
+    digitalWrite(green, HIGH); //Green LED
+  }
+  server.send(200, "text/html", SendHTML(moistVal,percent)); 
+  }
+
+  void handle_NotFound()
+  {
+    server.send(404,"text/plain","Not Found");
+  }
+
+  String SendHTML(int moistVal, int percent)
+  {
+    String page = "<!DOCTYPE html><html>\n";
+    page += "<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
+    page += "<title> Plant Moisture Sensor </title>\n";
+    page += "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
+    page +="body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;}\n";
+    page +="p {font-size: 24px;color: #444444;margin-bottom: 10px;}\n";
+    page +="</style>\n";
+    page +="</head>\n";
+    page +="<body>\n";
+    page +="<div id=\"webpage\">\n";
+    page +="<h1>VALUE OF SOIL MOISTURE AND PERCENT OF SOIL MOISTURE</h1>\n";
+
+    page +="<p>Moisture Value : ";
+    page +=(int)moistVal;
+    page +="</p>\n";
+    page +="<p>Percent of soil moisture : ";
+    page +=(int)percent;
+    page +="%</p>";
+
+    page +="<p>";
+    if ((int)moistVal <= 150) {
+    page +="Soil too dry need to watered.\n";
+    }
+    else if ((int)moistVal >= 400){
+    page +="Soil too wet no need to watered.\n";
+    }
+    else {
+    page +="Soil in good condition for plant.\n";
+    };
+    page +="</p>";
+    
+    page +="</div>\n";
+    page +="</body>\n";
+    page +="</html>\n";
+    return page;
+  }
+  
