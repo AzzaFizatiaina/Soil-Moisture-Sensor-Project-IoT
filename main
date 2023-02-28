@@ -2,7 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 
-const char* ssid = "T"; //Insert ssid
+const char* ssid = ""; //Insert ssid
 const char* password = ""; //Insert password 
 
 //create an instance of the ESP8266WebServer library
